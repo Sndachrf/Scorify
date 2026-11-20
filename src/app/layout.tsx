@@ -22,6 +22,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Warna bilah status/judul Android & tema browser: biru brand Scorify.
+  themeColor: "#1d4ed8",
 };
 
 export default function RootLayout({
