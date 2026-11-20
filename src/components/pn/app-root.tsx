@@ -84,7 +84,7 @@ function SidebarDesktop() {
           Anda &amp; tersinkron ke Google Sheets.
         </div>
         <p className="text-center text-[11px] text-muted-foreground">
-          v1.10 · Dibuat untuk Guru Indonesia
+          v1.11 · Dibuat untuk Guru Indonesia
         </p>
       </div>
     </aside>
