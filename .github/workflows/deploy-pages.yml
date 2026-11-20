@@ -45,7 +45,6 @@ jobs:
       - name: Build static export
         env:
           STATIC_EXPORT: "true"
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
           # URL Web App ditanam saat build (PRD v1.8): aplikasi hasil deploy
           # langsung terhubung ke Google Sheets tanpa setup di dalam aplikasi.
           NEXT_PUBLIC_GAS_URL: ${{ secrets.GAS_WEB_APP_URL }}
