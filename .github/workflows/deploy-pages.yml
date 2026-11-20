@@ -1,0 +1,68 @@
+# Deploy otomatis ke GitHub Pages (PRD v1.4 bagian 5, v1.8 konfigurasi build).
+#
+# Persiapan sekali di GitHub:
+#   1. Push repository ini ke GitHub (branch main).
+#   2. Settings > Secrets and variables > Actions > New repository secret:
+#        Nama : GAS_WEB_APP_URL
+#        Nilai: URL Web App Apps Script yang berakhir /exec
+#      (lihat panduan deploy untuk langkah membuat Web App-nya)
+#   3. Settings > Pages > Build and deployment > Source: "GitHub Actions".
+#   4. Setiap push ke main akan build & publish otomatis ke
+#      https://<username>.github.io/<nama-repo>/
+#
+# Catatan: nama repo dipakai sebagai basePath otomatis (NEXT_PUBLIC_BASE_PATH).
+# Untuk repo user-pages (<username>.github.io), hapus NEXT_PUBLIC_BASE_PATH
+# pada langkah build agar basePath kosong.
+name: Deploy ke GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build static export
+        env:
+          STATIC_EXPORT: "true"
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          # URL Web App ditanam saat build (PRD v1.8): aplikasi hasil deploy
+          # langsung terhubung ke Google Sheets tanpa setup di dalam aplikasi.
+          NEXT_PUBLIC_GAS_URL: ${{ secrets.GAS_WEB_APP_URL }}
+        run: bun run build:pages
+
+      - name: Upload artifact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy ke GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
