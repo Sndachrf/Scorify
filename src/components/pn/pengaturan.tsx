@@ -1,9 +1,11 @@
 'use client';
 
-// Pengaturan (PRD v1.8 & v1.9): hanya status sinkronisasi, tanpa setup apa pun.
+// Pengaturan (PRD v1.8 & v1.9, revisi v1.10): hanya status sinkronisasi, tanpa setup apa pun.
 // URL Web App ditanam saat build (NEXT_PUBLIC_GAS_URL), sehingga aplikasi hasil deploy
-// langsung siap dipakai begitu dibuka. URL tetap ditutup sebagian (permintaan v1.7).
+// langsung siap dipakai begitu dibuka.
 // v1.9: kartu penjelasan "Mode Data Lokal" disembunyikan; status cukup tampil ringkas (badge + satu baris).
+// v1.10: URL Web App tidak ditampilkan sama sekali dan kartu "Tentang Koneksi Ini" dihapus
+//        (permintaan guru: cukup status, detail koneksi tidak perlu terlihat pengguna).
 import { useEffect, useState } from 'react';
 import { getGasUrlDetail, type GasUrlInfo } from '@/lib/pn/db';
 import { syncNow } from '@/lib/pn/sync/engine';
@@ -11,41 +13,17 @@ import { useSyncStore } from '@/lib/pn/sync/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import {
-  CheckCircle2, Copy, Database, Eye, EyeOff, RefreshCw, ShieldAlert, Wifi, WifiOff,
+  CheckCircle2, Database, RefreshCw, Wifi, WifiOff,
 } from 'lucide-react';
 
-/** Sembunyikan bagian tengah URL (PRD v1.7 7.7): hanya sebagian awal dan akhir yang tampil. */
-function maskUrl(url: string): string {
-  const m = url.match(/^(https:\/\/script\.google\.com\/macros\/s\/)([^/]+)(\/.*)$/);
-  if (!m) {
-    return url.length <= 24 ? url : `${url.slice(0, 24)}…`;
-  }
-  const id = m[2];
-  const potongan = id.length <= 10 ? id : `${id.slice(0, 6)}…${id.slice(-2)}`;
-  return `${m[1]}${potongan}${m[3]}`;
-}
-
 export function Pengaturan() {
-  const { toast } = useToast();
   const sync = useSyncStore();
   const [info, setInfo] = useState<GasUrlInfo>({ url: null, sumber: null });
-  const [lihatUrl, setLihatUrl] = useState(false);
 
   useEffect(() => {
     void getGasUrlDetail().then(setInfo);
   }, []);
-
-  const salinUrl = async () => {
-    if (!info.url) return;
-    try {
-      await navigator.clipboard.writeText(info.url);
-      toast({ title: 'URL disalin', description: 'Tempel hanya di tempat yang aman.' });
-    } catch {
-      toast({ title: 'Gagal menyalin', description: 'Tampilkan URL lalu salin manual.', variant: 'destructive' });
-    }
-  };
 
   const terhubung = info.sumber != null;
 
@@ -89,44 +67,6 @@ export function Pengaturan() {
             Sinkron terakhir:{' '}
             {sync.lastSync ? new Date(sync.lastSync).toLocaleString('id-ID') : 'belum pernah'}
           </p>
-          {info.url && (
-            <div className="rounded-md border bg-muted/40 p-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                URL Web App terpasang
-                {info.sumber === 'build' ? ' (ditanam saat build)' : ' (tersimpan di perangkat)'}
-              </p>
-              <div className="mt-1.5 flex items-center gap-2">
-                <code
-                  className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1.5 font-mono text-xs"
-                  title={lihatUrl ? info.url : undefined}
-                >
-                  {lihatUrl ? info.url : maskUrl(info.url)}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-10 shrink-0"
-                  aria-label={lihatUrl ? 'Sembunyikan URL' : 'Tampilkan URL'}
-                  aria-pressed={lihatUrl}
-                  onClick={() => setLihatUrl((v) => !v)}
-                >
-                  {lihatUrl ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-10 shrink-0"
-                  aria-label="Salin URL"
-                  onClick={() => void salinUrl()}
-                >
-                  <Copy className="size-4" />
-                </Button>
-              </div>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                URL tertutup sebagian secara default untuk menjaga kerahasiaannya.
-              </p>
-            </div>
-          )}
           <div className="flex flex-wrap gap-2 pt-1">
             <Button
               variant="outline"
@@ -144,39 +84,6 @@ export function Pengaturan() {
           )}
         </CardContent>
       </Card>
-
-      {terhubung && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tentang Koneksi Ini</CardTitle>
-            <CardDescription>
-              Koneksi dipasang saat aplikasi dibangun (build), bukan di halaman ini.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              URL Web App Google Apps Script ditanam ke aplikasi saat build (secret
-              GAS_WEB_APP_URL di repository GitHub). Karena itu aplikasi langsung terhubung
-              begitu dibuka, di perangkat mana pun.
-            </p>
-            <p>
-              Perlu ganti koneksi (misal pindah ke spreadsheet baru)? Ikuti panduan deploy yang
-              menyertai proyek: deploy ulang skrip, perbarui secret, lalu deploy ulang aplikasi.
-              Tidak ada yang perlu diubah di perangkat ini.
-            </p>
-            <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <p>
-                Jaga kerahasiaan URL dan tautan aplikasi: siapa pun yang memegang URL
-                <code className="mx-1">/exec</code>
-                dapat membaca dan mengubah data. Jangan menampilkan halaman ini saat layar
-                diproyeksikan. Jangan mengubah tab nilai langsung di Google Sheets (gunakan
-                aplikasi ini) agar data tidak rusak.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
